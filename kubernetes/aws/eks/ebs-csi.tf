@@ -1,10 +1,10 @@
 locals {
   # ebs CSI
   ebs_csi = {
-    name                                  = coalesce(var.ebs_csi_name, "${var.name}-ebs-csi-driver")
+    name                                  = coalesce(var.ebs_csi.name, "${var.name}-ebs-csi-driver")
     oidc_arn                              = module.eks.oidc_provider_arn
     oidc_url                              = trimprefix(module.eks.cluster_oidc_issuer_url, "https://")
-    namespace                             = coalesce(var.ebs_csi_namespace, "kube-system")
+    namespace                             = coalesce(var.ebs_csi.namespace, "kube-system")
     kubernetes_service_account_controller = "ebs-csi-controller"
     kubernetes_service_account_node       = "ebs-csi-node"
 
@@ -23,7 +23,7 @@ locals {
       logLevel            = 2
       extraCreateMetadata = true
       podAnnotations      = {}
-      resources           = var.ebs_csi_controller_resources
+      resources           = var.ebs_csi.controller_resources
       nodeSelector        = var.node_selector
       tolerations         = local.ebs_csi.tolerations
       affinity            = {}
@@ -39,6 +39,40 @@ locals {
     }
   }
 }
+
+# Simpler IAM policies
+# data "aws_iam_policy_document" "ebs_csi_driver" {
+#   statement {
+#     actions = [
+#       "ec2:CreateVolume",
+#       "ec2:AttachVolume",
+#       "ec2:DetachVolume",
+#       "ec2:DeleteVolume",
+#       "ec2:CreateSnapshot",
+#       "ec2:DeleteSnapshot",
+#       "ec2:DescribeVolumes",
+#       "ec2:DescribeSnapshots",
+#       "ec2:DescribeInstances",
+#       "ec2:DescribeAvailabilityZones",
+#       "ec2:DescribeVolumeStatus",
+#       "ec2:DescribeVolumeAttribute",
+#       "ec2:DescribeSnapshotAttribute",
+#       "ec2:DescribeInstanceAttribute",
+#       "ec2:DescribeInstanceCreditSpecifications",
+#       "ec2:DescribeVolumeTypes",
+#       "ec2:DescribeVpcAttribute",
+#       "ec2:DescribeVpcEndpoints",
+#       "ec2:DescribeVpcs",
+#       "ec2:ModifyVolume",
+#       "ec2:ModifyVolumeAttribute",
+#       "ec2:ModifyInstanceAttribute",
+#       "ec2:CreateTags",
+#       "ec2:DeleteTags"
+#     ]
+#     effect    = "Allow"
+#     resources = ["*"]
+#   }
+# }
 
 # Allow EKS and the driver to interact with ebs
 data "aws_iam_policy_document" "ebs_csi_driver" {
@@ -262,43 +296,43 @@ resource "helm_release" "ebs_csi" {
   name       = "ebs-csi"
   namespace  = kubernetes_service_account.ebs_csi_driver_controller.metadata[0].namespace
   chart      = "aws-ebs-csi-driver"
-  repository = var.ebs_csi_repository
-  version    = var.ebs_csi_version
+  repository = var.ebs_csi.repository
+  version    = var.ebs_csi.version
 
   set {
     name  = "image.repository"
-    value = var.ebs_csi_image
+    value = var.ebs_csi.image
   }
   set {
     name  = "image.tag"
-    value = var.ebs_csi_tag
+    value = var.ebs_csi.tag
   }
   set {
     name  = "sidecars.livenessProbe.image.repository"
-    value = var.ebs_csi_liveness_probe_image
+    value = var.csi_liveness_probe.image
   }
   set {
     name  = "sidecars.livenessProbe.image.tag"
-    value = var.ebs_csi_liveness_probe_tag
+    value = var.csi_liveness_probe.tag
   }
   set {
     name  = "sidecars.nodeDriverRegistrar.image.repository"
-    value = var.ebs_csi_node_driver_registrar_image
+    value = var.csi_node_driver_registrar.image
   }
   set {
     name  = "sidecars.nodeDriverRegistrar.image.tag"
-    value = var.ebs_csi_node_driver_registrar_tag
+    value = var.csi_node_driver_registrar.tag
   }
   set {
     name  = "sidecars.provisioner.image.repository"
-    value = var.ebs_csi_external_provisioner_image
+    value = var.csi_external_provisioner.image
   }
   set {
     name  = "sidecars.provisioner.image.tag"
-    value = var.ebs_csi_external_provisioner_tag
+    value = var.csi_external_provisioner.tag
   }
   dynamic "set" {
-    for_each = toset(compact([var.ebs_csi_image_pull_secrets]))
+    for_each = toset(compact([var.ebs_csi.image_pull_secrets]))
     content {
       name  = "imagePullSecrets"
       value = each.key
