@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: {{ .Release.Name }}
+    service: admin-gui
+  name: admin-gui
+spec:
+  ports:
+  - port: {{ .Values.adminGui.port }}
+    targetPort: 1080
+    protocol: TCP

@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: {{ .Release.Name }}
+    service: admin-gui
+  name: admin-gui
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+      service: admin-gui
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+        service: admin-gui
+      name: admin-gui
+    spec:
+      automountServiceAccountToken: true
+      containers:
+      - image: {{ .Values.registry }}/{{ .Values.adminGui.image }}
+        imagePullPolicy: {{ .Values.adminGui.imagePullPolicy }}
+        name: admin-app
+        ports:
+        - name: app-port
+          containerPort: {{ .Values.adminGui.port }}
+          protocol: TCP        
+        resources:
+        {{- toYaml .Values.adminGui.resources | nindent 10 }}
+      tolerations:
+      {{- toYaml .Values.adminGui.tolerations | nindent 8 }}
